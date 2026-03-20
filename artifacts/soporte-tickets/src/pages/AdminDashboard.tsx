@@ -2,16 +2,18 @@ import React, { useState } from "react";
 import { Link } from "wouter";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { Filter, Search, Inbox, ArrowRight } from "lucide-react";
+import { Inbox, ArrowRight, LogOut } from "lucide-react";
 import { useListTickets, ListTicketsStatus } from "@workspace/api-client-react";
 import { Navbar } from "@/components/Navbar";
 import { StatusBadge } from "@/components/StatusBadge";
 import { ProblemTypeIcon } from "@/components/ProblemTypeIcon";
+import { useAuth } from "@/context/AuthContext";
 
 type FilterTab = 'todos' | ListTicketsStatus;
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState<FilterTab>('todos');
+  const { logout } = useAuth();
   
   // Convert 'todos' to undefined for the API call
   const queryStatus = activeTab === 'todos' ? undefined : activeTab;
@@ -32,6 +34,13 @@ export default function AdminDashboard() {
             <h1 className="text-3xl font-bold font-display text-foreground">Panel de Administración</h1>
             <p className="text-muted-foreground mt-1">Gestiona y da seguimiento a los tickets de soporte</p>
           </div>
+          <button
+            onClick={logout}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:text-destructive hover:bg-destructive/10 border border-border hover:border-destructive/30 transition-all"
+          >
+            <LogOut className="w-4 h-4" />
+            Cerrar sesión
+          </button>
         </div>
 
         {/* Filters */}
