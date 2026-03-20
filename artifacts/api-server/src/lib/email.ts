@@ -1,16 +1,28 @@
-import { Resend } from "resend";
+import nodemailer from "nodemailer";
 import { logger } from "./logger";
 
 const ADMIN_EMAIL = "matiasagustinpatti123@gmail.com";
-const FROM_EMAIL = "onboarding@resend.dev";
 
-function getResendClient(): Resend | null {
-  const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey) {
-    logger.warn("RESEND_API_KEY not set - emails will not be sent");
+function getTransporter() {
+  const gmailUser = process.env.GMAIL_USER;
+  const gmailAppPassword = process.env.GMAIL_APP_PASSWORD;
+
+  if (!gmailUser || !gmailAppPassword) {
+    logger.warn("GMAIL_USER o GMAIL_APP_PASSWORD no configurados - los emails no se enviarán");
     return null;
   }
-  return new Resend(apiKey);
+
+  return nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+      user: gmailUser,
+      pass: gmailAppPassword,
+    },
+  });
+}
+
+function getFromEmail(): string {
+  return process.env.GMAIL_USER ?? "noreply@soporte.com";
 }
 
 export async function sendTicketCreatedToClient(opts: {
@@ -20,31 +32,35 @@ export async function sendTicketCreatedToClient(opts: {
   problemType: string;
   description: string;
 }): Promise<void> {
-  const resend = getResendClient();
-  if (!resend) return;
+  const transporter = getTransporter();
+  if (!transporter) return;
+
   try {
-    await resend.emails.send({
-      from: FROM_EMAIL,
+    await transporter.sendMail({
+      from: `"Soporte Técnico" <${getFromEmail()}>`,
       to: opts.clientEmail,
       subject: `Ticket de soporte recibido - ${opts.ticketNumber}`,
       html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #2563eb;">Tu ticket de soporte fue registrado</h2>
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <h2 style="color: #2563eb;">Tu ticket de soporte fue registrado ✅</h2>
           <p>Hola <strong>${opts.clientName}</strong>,</p>
-          <p>Recibimos tu consulta y fue registrada exitosamente. Aquí están los detalles:</p>
-          <div style="background: #f3f4f6; padding: 16px; border-radius: 8px; margin: 16px 0;">
-            <p><strong>Número de ticket:</strong> <span style="color: #2563eb; font-size: 18px;">${opts.ticketNumber}</span></p>
-            <p><strong>Tipo de problema:</strong> ${opts.problemType === "hardware" ? "Hardware" : "Software"}</p>
-            <p><strong>Descripción:</strong> ${opts.description}</p>
+          <p>Recibimos tu consulta y fue registrada exitosamente. Guardá este número de ticket para hacer el seguimiento:</p>
+          <div style="background: #eff6ff; border: 2px solid #2563eb; border-radius: 8px; padding: 20px; margin: 20px 0; text-align: center;">
+            <p style="margin: 0; font-size: 14px; color: #6b7280;">Número de ticket</p>
+            <p style="margin: 8px 0 0; font-size: 28px; font-weight: bold; color: #2563eb; letter-spacing: 2px;">${opts.ticketNumber}</p>
           </div>
-          <p>Podés hacer seguimiento de tu ticket usando el número <strong>${opts.ticketNumber}</strong>. Te notificaremos cuando haya actualizaciones.</p>
-          <p style="color: #6b7280; font-size: 14px;">Gracias por contactarnos.</p>
+          <table style="width: 100%; border-collapse: collapse; margin: 16px 0;">
+            <tr><td style="padding: 8px; border-bottom: 1px solid #e5e7eb; color: #6b7280;">Tipo de problema</td><td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${opts.problemType === "hardware" ? "Hardware" : "Software"}</td></tr>
+            <tr><td style="padding: 8px; color: #6b7280; vertical-align: top;">Descripción</td><td style="padding: 8px;">${opts.description}</td></tr>
+          </table>
+          <p>Nuestro equipo revisará tu problema y te contactará a la brevedad. Te notificaremos por email cuando haya actualizaciones.</p>
+          <p style="color: #6b7280; font-size: 13px; margin-top: 30px; border-top: 1px solid #e5e7eb; padding-top: 16px;">Este es un mensaje automático, por favor no respondas este email directamente.</p>
         </div>
       `,
     });
-    logger.info({ ticketNumber: opts.ticketNumber, to: opts.clientEmail }, "Client notification email sent");
+    logger.info({ ticketNumber: opts.ticketNumber, to: opts.clientEmail }, "Email de confirmación enviado al cliente");
   } catch (err) {
-    logger.error({ err }, "Failed to send client email");
+    logger.error({ err }, "Error al enviar email al cliente");
   }
 }
 
@@ -57,35 +73,38 @@ export async function sendTicketCreatedToAdmin(opts: {
   problemType: string;
   description: string;
 }): Promise<void> {
-  const resend = getResendClient();
-  if (!resend) return;
+  const transporter = getTransporter();
+  if (!transporter) return;
+
   try {
-    await resend.emails.send({
-      from: FROM_EMAIL,
+    await transporter.sendMail({
+      from: `"Soporte Técnico" <${getFromEmail()}>`,
       to: ADMIN_EMAIL,
-      subject: `Nuevo ticket: ${opts.ticketNumber} - ${opts.clientName} (${opts.company})`,
+      subject: `🎫 Nuevo ticket: ${opts.ticketNumber} - ${opts.clientName} (${opts.company})`,
       html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
           <h2 style="color: #dc2626;">Nuevo ticket de soporte recibido</h2>
-          <div style="background: #fef2f2; border-left: 4px solid #dc2626; padding: 16px; margin: 16px 0;">
-            <p><strong>Ticket:</strong> ${opts.ticketNumber}</p>
+          <div style="background: #fef2f2; border-left: 4px solid #dc2626; border-radius: 0 8px 8px 0; padding: 16px; margin: 16px 0;">
+            <p style="margin: 0; font-size: 20px; font-weight: bold; color: #dc2626;">${opts.ticketNumber}</p>
           </div>
-          <h3>Datos del cliente</h3>
+          <h3 style="color: #374151;">Datos del cliente</h3>
           <table style="width: 100%; border-collapse: collapse;">
-            <tr><td style="padding: 8px; border-bottom: 1px solid #e5e7eb;"><strong>Nombre:</strong></td><td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${opts.clientName}</td></tr>
-            <tr><td style="padding: 8px; border-bottom: 1px solid #e5e7eb;"><strong>Empresa:</strong></td><td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${opts.company}</td></tr>
-            <tr><td style="padding: 8px; border-bottom: 1px solid #e5e7eb;"><strong>Email:</strong></td><td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${opts.clientEmail}</td></tr>
-            <tr><td style="padding: 8px; border-bottom: 1px solid #e5e7eb;"><strong>Teléfono:</strong></td><td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${opts.phone}</td></tr>
-            <tr><td style="padding: 8px; border-bottom: 1px solid #e5e7eb;"><strong>Tipo:</strong></td><td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${opts.problemType === "hardware" ? "Hardware" : "Software"}</td></tr>
+            <tr style="background: #f9fafb;"><td style="padding: 10px; border: 1px solid #e5e7eb; font-weight: 600; width: 35%;">Nombre</td><td style="padding: 10px; border: 1px solid #e5e7eb;">${opts.clientName}</td></tr>
+            <tr><td style="padding: 10px; border: 1px solid #e5e7eb; font-weight: 600;">Empresa</td><td style="padding: 10px; border: 1px solid #e5e7eb;">${opts.company}</td></tr>
+            <tr style="background: #f9fafb;"><td style="padding: 10px; border: 1px solid #e5e7eb; font-weight: 600;">Email</td><td style="padding: 10px; border: 1px solid #e5e7eb;"><a href="mailto:${opts.clientEmail}">${opts.clientEmail}</a></td></tr>
+            <tr><td style="padding: 10px; border: 1px solid #e5e7eb; font-weight: 600;">Teléfono</td><td style="padding: 10px; border: 1px solid #e5e7eb;">${opts.phone}</td></tr>
+            <tr style="background: #f9fafb;"><td style="padding: 10px; border: 1px solid #e5e7eb; font-weight: 600;">Tipo</td><td style="padding: 10px; border: 1px solid #e5e7eb;">${opts.problemType === "hardware" ? "🖥️ Hardware" : "💻 Software"}</td></tr>
           </table>
-          <h3>Descripción del problema</h3>
-          <p style="background: #f9fafb; padding: 12px; border-radius: 6px;">${opts.description}</p>
+          <h3 style="color: #374151;">Descripción del problema</h3>
+          <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; padding: 16px;">
+            <p style="margin: 0; line-height: 1.6;">${opts.description}</p>
+          </div>
         </div>
       `,
     });
-    logger.info({ ticketNumber: opts.ticketNumber }, "Admin notification email sent");
+    logger.info({ ticketNumber: opts.ticketNumber }, "Email de notificación enviado al admin");
   } catch (err) {
-    logger.error({ err }, "Failed to send admin email");
+    logger.error({ err }, "Error al enviar email al admin");
   }
 }
 
@@ -95,27 +114,31 @@ export async function sendCommentToClient(opts: {
   ticketNumber: string;
   commentContent: string;
 }): Promise<void> {
-  const resend = getResendClient();
-  if (!resend) return;
+  const transporter = getTransporter();
+  if (!transporter) return;
+
   try {
-    await resend.emails.send({
-      from: FROM_EMAIL,
+    await transporter.sendMail({
+      from: `"Soporte Técnico" <${getFromEmail()}>`,
       to: opts.clientEmail,
-      subject: `Actualización de tu ticket ${opts.ticketNumber}`,
+      subject: `💬 Actualización de tu ticket ${opts.ticketNumber}`,
       html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
           <h2 style="color: #2563eb;">Hay una actualización en tu ticket</h2>
           <p>Hola <strong>${opts.clientName}</strong>,</p>
           <p>El equipo de soporte agregó un mensaje a tu ticket <strong>${opts.ticketNumber}</strong>:</p>
-          <div style="background: #eff6ff; border-left: 4px solid #2563eb; padding: 16px; margin: 16px 0; border-radius: 0 8px 8px 0;">
-            <p>${opts.commentContent}</p>
+          <div style="background: #eff6ff; border-left: 4px solid #2563eb; border-radius: 0 8px 8px 0; padding: 16px; margin: 20px 0;">
+            <p style="margin: 0; line-height: 1.6;">${opts.commentContent}</p>
           </div>
-          <p style="color: #6b7280; font-size: 14px;">Ticket: ${opts.ticketNumber}</p>
+          <p style="color: #6b7280; font-size: 13px; margin-top: 30px; border-top: 1px solid #e5e7eb; padding-top: 16px;">
+            Ticket: ${opts.ticketNumber}<br>
+            Este es un mensaje automático, por favor no respondas este email directamente.
+          </p>
         </div>
       `,
     });
-    logger.info({ ticketNumber: opts.ticketNumber, to: opts.clientEmail }, "Comment notification email sent to client");
+    logger.info({ ticketNumber: opts.ticketNumber, to: opts.clientEmail }, "Email de comentario enviado al cliente");
   } catch (err) {
-    logger.error({ err }, "Failed to send comment email");
+    logger.error({ err }, "Error al enviar email de comentario al cliente");
   }
 }
