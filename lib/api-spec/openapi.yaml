@@ -1,15 +1,18 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: API de Sistema de Tickets de Soporte
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: tickets
+    description: Ticket operations
+  - name: comments
+    description: Comment operations
 paths:
   /healthz:
     get:
@@ -24,6 +27,140 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /tickets:
+    get:
+      operationId: listTickets
+      tags: [tickets]
+      summary: List all tickets
+      description: Returns list of tickets for admin portal
+      parameters:
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [cargado, en_revision, finalizado]
+          required: false
+          description: Filter by status
+      responses:
+        "200":
+          description: List of tickets
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Ticket"
+    post:
+      operationId: createTicket
+      tags: [tickets]
+      summary: Create a new ticket
+      description: Creates a new support ticket and sends email notifications
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTicketRequest"
+      responses:
+        "201":
+          description: Ticket created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Ticket"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /tickets/{id}:
+    get:
+      operationId: getTicket
+      tags: [tickets]
+      summary: Get ticket by ID
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Ticket details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TicketDetail"
+        "404":
+          description: Ticket not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    patch:
+      operationId: updateTicketStatus
+      tags: [tickets]
+      summary: Update ticket status
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateTicketStatusRequest"
+      responses:
+        "200":
+          description: Ticket updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Ticket"
+        "404":
+          description: Ticket not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /tickets/{id}/comments:
+    post:
+      operationId: addComment
+      tags: [comments]
+      summary: Add a comment to a ticket
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddCommentRequest"
+      responses:
+        "201":
+          description: Comment added
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Comment"
+        "404":
+          description: Ticket not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +171,140 @@ components:
       required:
         - status
 
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+
+    TicketStatus:
+      type: string
+      enum: [cargado, en_revision, finalizado]
+
+    ProblemType:
+      type: string
+      enum: [hardware, software]
+
+    Ticket:
+      type: object
+      properties:
+        id:
+          type: integer
+        ticketNumber:
+          type: string
+        clientName:
+          type: string
+        company:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+        problemType:
+          $ref: "#/components/schemas/ProblemType"
+        description:
+          type: string
+        status:
+          $ref: "#/components/schemas/TicketStatus"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - ticketNumber
+        - clientName
+        - company
+        - email
+        - phone
+        - problemType
+        - description
+        - status
+        - createdAt
+        - updatedAt
+
+    TicketDetail:
+      allOf:
+        - $ref: "#/components/schemas/Ticket"
+        - type: object
+          properties:
+            comments:
+              type: array
+              items:
+                $ref: "#/components/schemas/Comment"
+          required:
+            - comments
+
+    Comment:
+      type: object
+      properties:
+        id:
+          type: integer
+        ticketId:
+          type: integer
+        content:
+          type: string
+        isInternal:
+          type: boolean
+          description: If true, only visible to admin. If false, also sent to client via email.
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - ticketId
+        - content
+        - isInternal
+        - createdAt
+
+    CreateTicketRequest:
+      type: object
+      properties:
+        clientName:
+          type: string
+          minLength: 2
+        company:
+          type: string
+          minLength: 1
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+          minLength: 6
+        problemType:
+          $ref: "#/components/schemas/ProblemType"
+        description:
+          type: string
+          minLength: 10
+      required:
+        - clientName
+        - company
+        - email
+        - phone
+        - problemType
+        - description
+
+    UpdateTicketStatusRequest:
+      type: object
+      properties:
+        status:
+          $ref: "#/components/schemas/TicketStatus"
+      required:
+        - status
+
+    AddCommentRequest:
+      type: object
+      properties:
+        content:
+          type: string
+          minLength: 1
+        isInternal:
+          type: boolean
+      required:
+        - content
+        - isInternal

@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "Sistema de Tickets de Soporte"
+version = "1.0.0"
+id = "artifacts/soporte-tickets"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 23785
+
+[services.development]
+run = "pnpm --filter @workspace/soporte-tickets run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/soporte-tickets", "run", "build" ]
+publicDir = "artifacts/soporte-tickets/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "23785"
+BASE_PATH = "/"

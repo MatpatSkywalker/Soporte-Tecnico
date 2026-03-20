@@ -1,0 +1,18 @@
+packages:
+  "framer-motion": "For smooth page transitions and interactive micro-animations"
+  "date-fns": "To parse and format ticket creation and comment dates nicely"
+  "react-hook-form": "For robust form state management"
+  "@hookform/resolvers": "To integrate Zod validation with react-hook-form"
+  "lucide-react": "For beautiful consistent iconography across portals"
+
+images:
+  - path: "artifacts/soporte-tickets/public/images/hero-bg.png"
+    description: "Abstract modern minimal corporate tech background, soft white and slate blue gradients, clean, highly professional"
+    aspect_ratio: "16:9"
+  - path: "artifacts/soporte-tickets/public/images/logo.png"
+    description: "Minimalist tech support logo icon, sleek blue and gray intersecting geometric shapes, transparent background"
+    aspect_ratio: "1:1"
+
+notes:
+  - Using generated hooks and schemas from @workspace/api-client-react
+  - Utilizing native Tailwind form controls combined with Shadcn-like design patterns for maximum reliability
