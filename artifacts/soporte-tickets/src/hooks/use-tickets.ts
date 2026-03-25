@@ -3,6 +3,7 @@ import {
   useCreateTicket, 
   useUpdateTicketStatus, 
   useAddComment, 
+  useDeleteTicket,
   getListTicketsQueryKey, 
   getGetTicketQueryKey 
 } from "@workspace/api-client-react";
@@ -35,9 +36,18 @@ export function useTicketMutations() {
     }
   });
 
+  const deleteTicket = useDeleteTicket({
+    mutation: {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getListTicketsQueryKey() });
+      }
+    }
+  });
+
   return { 
     createTicket, 
     updateStatus, 
-    addComment 
+    addComment,
+    deleteTicket
   };
 }

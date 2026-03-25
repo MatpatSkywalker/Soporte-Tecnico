@@ -155,6 +155,33 @@ router.patch("/tickets/:id", async (req, res) => {
   }
 });
 
+router.delete("/tickets/:id", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id)) {
+      res.status(400).json({ error: "ID inválido" });
+      return;
+    }
+
+    await db.delete(commentsTable).where(eq(commentsTable.ticketId, id));
+
+    const [deleted] = await db
+      .delete(ticketsTable)
+      .where(eq(ticketsTable.id, id))
+      .returning();
+
+    if (!deleted) {
+      res.status(404).json({ error: "Ticket no encontrado" });
+      return;
+    }
+
+    res.status(200).json({ success: true });
+  } catch (err) {
+    req.log.error({ err }, "Failed to delete ticket");
+    res.status(500).json({ error: "Error interno del servidor" });
+  }
+});
+
 router.post("/tickets/:id/comments", async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);

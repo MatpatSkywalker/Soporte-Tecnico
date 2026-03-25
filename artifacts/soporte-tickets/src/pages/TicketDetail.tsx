@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useParams, Link } from "wouter";
+import { useParams, Link, useLocation } from "wouter";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { z } from "zod";
@@ -7,7 +7,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { 
   ArrowLeft, Building2, User, Mail, Phone, Clock, 
-  MessageSquare, Lock, Send, AlertCircle
+  MessageSquare, Lock, Send, AlertCircle, Trash2, X
 } from "lucide-react";
 import { useGetTicket, TicketStatus } from "@workspace/api-client-react";
 import { useTicketMutations } from "@/hooks/use-tickets";
@@ -25,9 +25,11 @@ type CommentFormData = z.infer<typeof commentSchema>;
 export default function TicketDetail() {
   const { id } = useParams<{ id: string }>();
   const ticketId = Number(id);
+  const [, navigate] = useLocation();
+  const [confirmDelete, setConfirmDelete] = useState(false);
   
   const { data: ticket, isLoading, isError } = useGetTicket(ticketId);
-  const { updateStatus, addComment } = useTicketMutations();
+  const { updateStatus, addComment, deleteTicket } = useTicketMutations();
 
   const { register, handleSubmit, reset, watch, formState: { errors } } = useForm<CommentFormData>({
     resolver: zodResolver(commentSchema),
@@ -98,18 +100,47 @@ export default function TicketDetail() {
             </div>
           </div>
           
-          <div className="flex items-center gap-3 bg-card p-2 rounded-xl border border-border shadow-sm">
-            <label className="text-sm font-medium text-muted-foreground pl-2">Estado:</label>
-            <select 
-              value={ticket.status}
-              onChange={onStatusChange}
-              disabled={updateStatus.isPending}
-              className="bg-secondary/50 border border-border text-foreground text-sm rounded-lg focus:ring-primary focus:border-primary block px-3 py-2 cursor-pointer outline-none transition-colors"
-            >
-              <option value="cargado">Cargado</option>
-              <option value="en_revision">En Revisión</option>
-              <option value="finalizado">Finalizado</option>
-            </select>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 bg-card p-2 rounded-xl border border-border shadow-sm">
+              <label className="text-sm font-medium text-muted-foreground pl-2">Estado:</label>
+              <select 
+                value={ticket.status}
+                onChange={onStatusChange}
+                disabled={updateStatus.isPending}
+                className="bg-secondary/50 border border-border text-foreground text-sm rounded-lg focus:ring-primary focus:border-primary block px-3 py-2 cursor-pointer outline-none transition-colors"
+              >
+                <option value="cargado">Cargado</option>
+                <option value="en_revision">En Revisión</option>
+                <option value="finalizado">Finalizado</option>
+              </select>
+            </div>
+
+            {confirmDelete ? (
+              <div className="flex items-center gap-2 bg-white border border-destructive/30 rounded-xl px-3 py-2 shadow-sm">
+                <span className="text-sm font-medium text-destructive">¿Eliminar ticket?</span>
+                <button
+                  onClick={() => deleteTicket.mutate({ id: ticketId }, { onSuccess: () => navigate('/admin') })}
+                  disabled={deleteTicket.isPending}
+                  className="px-3 py-1 text-sm font-bold bg-destructive text-white rounded-lg hover:bg-destructive/90 transition-colors disabled:opacity-60"
+                >
+                  {deleteTicket.isPending ? "Eliminando..." : "Sí, eliminar"}
+                </button>
+                <button
+                  onClick={() => setConfirmDelete(false)}
+                  className="p-1 text-muted-foreground hover:text-foreground rounded-lg hover:bg-secondary transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setConfirmDelete(true)}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-muted-foreground hover:text-destructive hover:bg-destructive/10 border border-border hover:border-destructive/30 transition-all bg-card shadow-sm"
+              >
+                <Trash2 className="w-4 h-4" />
+                Eliminar
+              </button>
+            )}
           </div>
         </div>
 
