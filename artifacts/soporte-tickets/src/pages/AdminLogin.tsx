@@ -32,7 +32,7 @@ export default function AdminLogin() {
         <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
           {/* Header */}
           <div className="px-8 pt-8 pb-6 text-center border-b border-border/40">
-            <img src={mapsysLogo} alt="MapSys" className="h-16 w-auto object-contain mx-auto mb-4" />
+            <img src={mapsysLogo} alt="MapSys" className="h-24 w-auto object-contain mx-auto mb-4" />
             <h1 className="font-display text-2xl font-bold" style={{ color: 'hsl(225 70% 15%)' }}>
               Portal de Administración
             </h1>

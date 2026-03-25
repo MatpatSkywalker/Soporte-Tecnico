@@ -76,7 +76,7 @@ export default function ClientPortal() {
               className="w-full"
             >
               <div className="text-center mb-10">
-                <img src="/images/mapsys-logo.png" alt="MapSys" className="h-16 w-auto mx-auto mb-6" />
+                <img src="/images/mapsys-logo.png" alt="MapSys" className="h-24 w-auto mx-auto mb-6" />
                 <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-4 font-display">
                   ¿En qué podemos <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent">ayudarte?</span>
                 </h1>
